@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pipe Head Regulator 3D</title>
+<style>
+  :root{--panel:rgba(18,24,32,.88);--ink:#e8edf2;--mute:#9aa8b6;--acc:#f0a830;--line:rgba(255,255,255,.12)}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(#cfe0ee,#eef2f4 60%,#d9dccf)}
+  #app{position:fixed;inset:0}
+  #panel{position:fixed;top:12px;left:12px;width:310px;max-height:calc(100% - 24px);overflow:auto;background:var(--panel);color:var(--ink);border-radius:12px;padding:14px 14px 10px;backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  #panel h1{font-size:16px;margin:0 0 2px;letter-spacing:.3px}
+  .sub{color:var(--mute);font-size:11.5px;margin-bottom:10px}
+  .grp{border-top:1px solid var(--line);padding:9px 0 6px}
+  .grp>.t{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--mute);margin-bottom:6px}
+  .row{margin:6px 0}
+  .row label{display:flex;justify-content:space-between}
+  .row label b{color:var(--acc);font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--acc)}
+  .seg{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
+  .seg button{flex:1;background:#2a3440;color:var(--ink);border:1px solid #3a4655;border-radius:6px;padding:5px 6px;cursor:pointer;font-size:12px;white-space:nowrap}
+  .seg button.on{background:var(--acc);color:#1b1b1b;border-color:var(--acc);font-weight:600}
+  .chk{display:flex;align-items:center;gap:7px;margin:5px 0;cursor:pointer}
+  .chk input{accent-color:var(--acc)}
+  .lbl{font-size:11.5px;color:var(--mute);margin-top:6px}
+  table{width:100%;border-collapse:collapse;font-size:11.8px}
+  td{padding:2.5px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+  td:last-child{text-align:right;color:#fff;font-variant-numeric:tabular-nums;padding-left:8px}
+  td:first-child{color:var(--mute)}
+  #tip{position:fixed;pointer-events:none;background:rgba(18,24,32,.92);color:#fff;padding:6px 9px;border-radius:7px;font-size:12px;display:none;max-width:300px;border-left:3px solid var(--acc)}
+  #tip small{display:block;color:#b9c6d3}
+  #hint{position:fixed;right:12px;bottom:10px;color:#2c3a47;font-size:11.5px;background:rgba(255,255,255,.65);padding:5px 9px;border-radius:6px}
+  @media (max-width:640px){#panel{width:calc(100% - 24px);max-height:55%;top:auto;bottom:12px}#hint{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="panel">
+  <h1>Pipe Head Regulator</h1>
+  <div class="sub">Typical offtake for sub-canals using a single pipe<br>After Al-Furat Center drawing T/385 (2002)</div>
+
+  <div class="grp">
+    <div class="t">Design parameters</div>
+    <div class="row"><label>Pipe diameter D <b id="v-D"></b></label><input type="range" id="D" min="0.4" max="1.2" step="0.1"></div>
+    <div class="row"><label>Fill over encasement (min 1.0) <b id="v-fill"></b></label><input type="range" id="fill" min="1.0" max="2.0" step="0.1"></div>
+    <div class="row"><label>Parent canal water level <b id="v-WL"></b></label><input type="range" id="WL" min="0.3" max="2.5" step="0.05"></div>
+    <div class="row"><label>D/S bed level above P.I.L. <b id="v-dBL"></b></label><input type="range" id="dBL" min="0.1" max="0.6" step="0.05"></div>
+    <div class="row"><label>D/S bed width <b id="v-Bw"></b></label><input type="range" id="Bw" min="0.6" max="2.0" step="0.1"></div>
+  </div>
+
+  <div class="grp">
+    <div class="t">Operation</div>
+    <div class="row"><label>Slide gate opening <b id="v-open"></b></label><input type="range" id="open" min="0" max="100" step="1"></div>
+    <div class="seg"><button id="play">▶ Animate gate</button></div>
+    <label class="chk"><input type="checkbox" id="stoplogs"> Insert stoplogs</label>
+  </div>
+
+  <div class="grp">
+    <div class="t">View</div>
+    <div class="lbl">Earthwork</div>
+    <div class="seg" data-key="earth">
+      <button data-v="solid" class="on">Solid</button><button data-v="glass">See-through</button><button data-v="none">Hide</button>
+    </div>
+    <div class="lbl">Concrete</div>
+    <div class="seg" data-key="concrete">
+      <button data-v="solid" class="on">Solid</button><button data-v="glass">See-through</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="rebar"> Show reinforcement (inlet box)</label>
+    <label class="chk"><input type="checkbox" id="water" checked> Show water</label>
+    <label class="chk"><input type="checkbox" id="section"> Section A–A (cut on pipe axis)</label>
+    <div class="seg" id="views">
+      <button data-cam="iso">3D</button><button data-cam="side">Side</button><button data-cam="plan">Plan</button>
+    </div>
+    <div class="seg" id="views2">
+      <button data-cam="inlet">Inlet box</button><button data-cam="outlet">Outlet</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="t">Derived dimensions (m)</div>
+    <table id="info"></table>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="hint">Drag to orbit · right-drag to pan · scroll to zoom · hover a part for its spec</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* Axes: x = flow direction (parent canal → sub-canal), y = up, z = across.
+   Origin: pipe invert level (P.I.L.) at the upstream end of the inlet box. Units: metres. */
+const S = { D:0.8, fill:1.0, WL:1.1, dBL:0.3, Bw:1.0, open:0, stoplogs:false,
+            earth:'solid', concrete:'solid', rebar:false, water:true, section:false };
+
+/* ---------------- renderer / scene ---------------- */
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.05, 300);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f78, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left:-22, right:22, top:22, bottom:-22, near:1, far:80 });
+sun.shadow.bias = -0.0003;
+scene.add(sun, sun.target);
+
+const root = new THREE.Group(); scene.add(root);
+
+/* ---------------- materials ---------------- */
+const M = {
+  rc:     { color:0xd2cec5, roughness:.9,  metalness:0, conc:true },
+  mass:   { color:0xb6b0a4, roughness:.95, metalness:0, conc:true },
+  blind:  { color:0x8f897e, roughness:1,   metalness:0, conc:true },
+  pipe:   { color:0xe2ded6, roughness:.8,  metalness:0, conc:true },
+  lining: { color:0xc4c0b6, roughness:.9,  metalness:0, conc:true, flatShading:true, side:THREE.DoubleSide },
+  steel:  { color:0x56687a, metalness:.6,  roughness:.45 },
+  leaf:   { color:0x2f6fa8, metalness:.45, roughness:.5 },
+  stiff:  { color:0x4a8fd0, metalness:.45, roughness:.5 },
+  stem:   { color:0xd5dade, metalness:.95, roughness:.22 },
+  red:    { color:0xa83a2a, metalness:.4,  roughness:.5 },
+  iron:   { color:0x2c2f33, metalness:.6,  roughness:.55 },
+  wood:   { color:0x8b5a2b, metalness:0,   roughness:.85 },
+  rebar:  { color:0xb4532a, metalness:.4,  roughness:.6 },
+};
+function newMat(key){
+  const { conc, ...p } = M[key];
+  const m = new THREE.MeshStandardMaterial(p);
+  m.userData.conc = !!conc; return m;
+}
+const earthMat = new THREE.MeshStandardMaterial({ vertexColors:true, roughness:1, metalness:0, side:THREE.DoubleSide });
+const waterMat = new THREE.MeshStandardMaterial({ color:0x3b8fd8, roughness:.12, metalness:.1, transparent:true, opacity:.5, depthWrite:false, side:THREE.DoubleSide });
+const rebarLineMat = new THREE.LineBasicMaterial({ color:0xc0501f });
+
+function addMesh(parent, geo, key, name, spec){
+  const m = new THREE.Mesh(geo, newMat(key));
+  m.castShadow = m.receiveShadow = true;
+  m.userData = { name, spec };
+  parent.add(m); return m;
+}
+function box(parent, x0,x1,y0,y1,z0,z1, key, name, spec){
+  const m = addMesh(parent, new THREE.BoxGeometry(Math.abs(x1-x0), Math.abs(y1-y0), Math.abs(z1-z0)), key, name, spec);
+  m.position.set((x0+x1)/2, (y0+y1)/2, (z0+z1)/2); return m;
+}
+function angle(parent, c, axis, len, dA, legA, dB, legB, t, key, name, spec){
+  const add = (ea, eb) => {
+    const p1 = c.map((v,i) => v + axis[i]*len + dA[i]*ea + dB[i]*eb);
+    box(parent, c[0],p1[0], c[1],p1[1], c[2],p1[2], key, name, spec);
+  };
+  add(legA, t); add(t, legB);
+}
+/* shape drawn in (z, y), extruded along +x from x0 */
+function extrudeX(parent, shape, x0, len, key, name, spec){
+  const m = addMesh(parent, new THREE.ExtrudeGeometry(shape, { depth:len, bevelEnabled:false, curveSegments:48 }), key, name, spec);
+  m.rotation.y = Math.PI/2; m.position.x = x0; return m;
+}
+function rectShape(z0,z1,y0,y1){
+  const s = new THREE.Shape(); s.moveTo(z0,y0); s.lineTo(z1,y0); s.lineTo(z1,y1); s.lineTo(z0,y1); s.closePath(); return s;
+}
+function circleHole(cy, r){ const h = new THREE.Path(); h.absarc(0, cy, r, 0, Math.PI*2, true); return h; }
+function annulus(cy, ro, ri){ const s = new THREE.Shape(); s.absarc(0, cy, ro, 0, Math.PI*2, false); s.holes.push(circleHole(cy, ri)); return s; }
+
+/* ---------------- derived geometry ---------------- */
+let D = {};
+function derive(){
+  const d = S.D;
+  const tp = d/12 + 0.025;                 // pipe wall thickness (assumed)
+  const ro = d/2 + tp;
+  const cov = Math.max(d/4, 0.25);         // Section B-B: D/4, min 0.25
+  const encHalf = ro + cov;
+  const RL = d + tp + cov + S.fill;        // road level above P.I.L.
+  const H = RL + 0.2;                      // inlet box wall top
+  const B = RL;                            // height of sloping part of wing walls
+  const K = 1.5*B;                         // K = 1.5 B
+  const xh = K + 1.7;                      // d/s face of headwall
+  const xR = xh + 5.0;                     // end of 5.0 m road
+  const GL = d + tp + cov + 0.3;           // natural ground / D/S bank top level
+  const xe = xR + 7*(RL - GL);             // ramp 7:1 reaches ground at the pipe outlet
+  const LT = Math.max(2.5, 5*S.dBL + 1.0); // transition length
+  return { d, tp, ro, cov, encHalf, RL, H, B, K, xh, xR, GL, xe, LT,
+    Wi: d + 0.2, Wo: d + 0.7, cy: d/2,
+    gs0: K+0.3, gs1: K+0.4, gg0: K+1.4, gg1: K+1.5,
+    pBed: -0.3, Wc: 4.0, wr: 2.0, hb0: ro + 0.1,
+    Lh: d + 0.35, xEnd: xe + LT + 9 };
+}
+
+/* ---------------- terrain (earthwork) ---------------- */
+function ground(x, z){
+  const { RL, GL, xR, xe, LT, xh, Wo, pBed, Wc, wr, hb0 } = D;
+  const az = Math.abs(z);
+  const xt = 1.5*pBed, xf = xt - Wc;
+  let y;
+  if(x < xf) y = Math.min(RL, pBed + (xf - x)/1.5);
+  else if(x < xt) y = pBed;
+  else if(x < 1.5*RL) y = x/1.5;
+  else if(x < xR) y = RL;
+  else y = Math.max(GL, RL - (x - xR)/1.5);
+  if(x >= xR){ const yr = Math.max(GL, RL - (x - xR)/7); y = Math.max(y, yr - Math.max(0, az - wr)/1.5); }
+  if(x >= xe){
+    const t = Math.min(1, (x - xe)/LT), yb = Math.min(S.dBL, (x - xe)/5);
+    const hb = hb0 + (S.Bw/2 - hb0)*t;
+    let c = yb + Math.max(0, az - hb)/1.5;
+    if(x <= xe + LT) c -= 0.1;   // room for the 0.1 m lining
+    y = Math.min(y, c);
+  }
+  if(x > -0.05 && x < xh + 0.02 && az < Wo/2 - 0.1) y = Math.min(y, -0.35);
+  return y;
+}
+function buildTerrain(parent){
+  const x0 = -14, x1 = D.xEnd, z0 = -10, z1 = 10, step = 0.1;
+  const nx = Math.round((x1-x0)/step), nz = Math.round((z1-z0)/step);
+  const geo = new THREE.PlaneGeometry(x1-x0, z1-z0, nx, nz);
+  geo.rotateX(-Math.PI/2); geo.translate((x0+x1)/2, 0, 0);
+  const pos = geo.attributes.position;
+  for(let i=0;i<pos.count;i++) pos.setY(i, ground(pos.getX(i), pos.getZ(i)));
+  geo.computeVertexNormals();
+  const nrm = geo.attributes.normal, col = new Float32Array(pos.count*3), c = new THREE.Color();
+  for(let i=0;i<pos.count;i++){
+    const x = pos.getX(i), y = pos.getY(i), ny = nrm.getY(i);
+    if(Math.abs(y - D.RL) < 0.005 && ny > 0.995 && x > 0 && x < D.xR + 0.05) c.setHex(0x8a8478);       // road
+    else if(Math.abs(y - D.RL) < 0.005 && ny > 0.995) c.setHex(0x9b8a6a);                               // far bank top
+    else if((x < 0 && y < D.pBed + 0.01) || (x > D.xe && y < S.dBL + 0.01)) c.setHex(0x6b5a44);          // canal beds
+    else if(ny > 0.995 && Math.abs(y - D.GL) < 0.01) c.setHex(0x7f9a5a);                                 // natural ground
+    else c.setHex(0xa08a64);                                                                             // slopes / fill
+    const n = (Math.sin(x*7.1)*Math.cos(pos.getZ(i)*6.3))*0.025;
+    col[i*3] = c.r + n; col[i*3+1] = c.g + n; col[i*3+2] = c.b + n;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const m = new THREE.Mesh(geo, earthMat);
+  m.receiveShadow = true; m.name = 'earth';
+  m.userData = { name:'Earthwork', earth:true };
+  parent.add(m);
+}
+function earthLabel(p){
+  const { RL, GL, xR, xe, wr } = D;
+  if(p.x < 0 && p.y < RL - 0.05) return ['Parent canal', 'Trapezoidal earth channel · side slopes 1.5:1'];
+  if(p.x >= xe) return p.y < GL - 0.05
+    ? ['Downstream sub-canal', `Bed width ${S.Bw.toFixed(1)} m · side slopes 1.5:1 · D/S B.L. +${S.dBL.toFixed(2)}`]
+    : ['Natural ground', `D/S bank top level (B.T.L.) +${GL.toFixed(2)}`];
+  if(Math.abs(p.y - RL) < 0.03) return ['Road (canal bank top)', 'Road width 5.0 m · road level +' + RL.toFixed(2)];
+  if(p.x > xR && Math.abs(p.z) < wr + 0.05) return ['Access ramp 7:1', 'Side slopes 1.5:1'];
+  return ['Compacted fill', 'Compacted to 95% soil Proctor test · min. 1.0 m over the pipe encasement'];
+}
+
+/* ---------------- structures ---------------- */
+let movingG, wheelG, rebarG, waterP, waterBox, waterDn;
+
+function disposeAll(){
+  root.traverse(o => { if(o.geometry) o.geometry.dispose(); if(o.material && o.material!==earthMat && o.material!==waterMat && o.material!==rebarLineMat) o.material.dispose(); });
+  root.clear();
+}
+
+function build(){
+  disposeAll();
+  D = derive();
+  const { d, tp, ro, cov, encHalf, RL, H, K, xh, xR, GL, xe, LT, Wi, Wo, cy, gs0, gs1, gg0, gg1, Lh } = D;
+  const fixed = new THREE.Group(); root.add(fixed);
+  buildTerrain(fixed);
+
+  /* --- inlet box (R.C. grade C25) --- */
+  const top = x => x < K ? 0.2 + x/1.5 : H;
+  const wallSeg = (x0, x1, zlo, zhi) => {
+    const s = new THREE.Shape();
+    s.moveTo(x0, -0.2); s.lineTo(x1, -0.2); s.lineTo(x1, top(x1));
+    if(x0 < K && x1 > K) s.lineTo(K, H);
+    s.lineTo(x0, top(x0)); s.closePath();
+    const m = addMesh(fixed, new THREE.ExtrudeGeometry(s, { depth:zhi-zlo, bevelEnabled:false }), 'rc', 'Inlet box side wall',
+      `R.C. grade C25 · 0.25 thick · top slopes 1.5:1 over K = 1.5B = ${K.toFixed(2)} m`);
+    m.position.z = zlo;
+  };
+  for(const s of [-1, 1]){
+    const zi = s*Wi/2, zo = s*Wo/2, zg = s*(Wi/2 + 0.1);
+    const Z = (a,b) => [Math.min(a,b), Math.max(a,b)];
+    wallSeg(0, gs0, ...Z(zi, zo));
+    wallSeg(gs0, gs1, ...Z(zg, zo));
+    wallSeg(gs1, gg0, ...Z(zi, zo));
+    wallSeg(gg0, gg1, ...Z(zg, zo));
+  }
+  const fl = 'Inlet box floor', fls = 'R.C. grade C25 · 0.2 thick · Ø12 @ 200 / Ø12 @ 100';
+  box(fixed, 0, gs0, -0.2, 0, -Wo/2, Wo/2, 'rc', fl, fls);
+  box(fixed, gs0, gs1, -0.2, -0.1, -Wo/2, Wo/2, 'rc', fl, 'Stoplog groove in floor 0.1 × 0.1 (Section C–C)');
+  box(fixed, gs1, xh, -0.2, 0, -Wo/2, Wo/2, 'rc', fl, fls);
+  box(fixed, 0, 0.2, -0.4, -0.2, -Wo/2, Wo/2, 'rc', 'Upstream toe', '0.2 × 0.2');
+  box(fixed, xh-0.25, xh, -0.8, -0.2, -Wo/2, Wo/2, 'rc', 'Cut-off wall', '0.25 thick · 0.6 deep below floor');
+  box(fixed, -0.1, xh+0.1, -0.3, -0.2, -Wo/2-0.1, Wo/2+0.1, 'blind', 'Blinding concrete', '0.1 m blinding, grade C7');
+
+  const hw = rectShape(-Wo/2, Wo/2, 0, H); hw.holes.push(circleHole(cy, ro));
+  extrudeX(fixed, hw, gg1, 0.2, 'rc', 'Headwall', `R.C. C25 · 0.2 thick · ${(Wo).toFixed(2)} wide = 0.25 + (D+0.2) + 0.25 · back face 3 coats Flintkote`);
+
+  /* groove angles L76×64×8 */
+  const gA = 'Groove angle', gAs = 'L76×64×8 with headed anchors Ø12 × 130 welded to the angle';
+  for(const [g0, g1, nm] of [[gs0, gs1, 'Stoplog groove'], [gg0, gg1, 'Gate groove']]){
+    for(const s of [-1, 1]){
+      angle(fixed, [g0, 0, s*Wi/2], [0,1,0], H, [-1,0,0], 0.076, [0,0,s], 0.064, 0.008, 'steel', `${nm} – ${gA}`, gAs);
+      angle(fixed, [g1, 0, s*Wi/2], [0,1,0], H, [ 1,0,0], 0.076, [0,0,s], 0.064, 0.008, 'steel', `${nm} – ${gA}`, gAs);
+    }
+  }
+  angle(fixed, [gs0, 0, -Wi/2], [0,0,1], Wi, [-1,0,0], 0.076, [0,-1,0], 0.064, 0.008, 'steel', 'Stoplog sill angle', gAs);
+  angle(fixed, [gs1, 0, -Wi/2], [0,0,1], Wi, [ 1,0,0], 0.076, [0,-1,0], 0.064, 0.008, 'steel', 'Stoplog sill angle', gAs);
+
+  /* --- pipe, encasement, outlet --- */
+  const xp0 = gg1, Lp = xe - xp0;
+  extrudeX(fixed, annulus(cy, ro, d/2), xp0, Lp, 'pipe', 'Concrete pipe', `Ø D = ${d.toFixed(2)} m · pipe length ≈ ${Lp.toFixed(1)} m`);
+  for(let x = xh + 2.4; x < xe - 0.6; x += 2.5)
+    extrudeX(fixed, annulus(cy, ro + 0.03, ro - 0.005), x, 0.14, 'pipe', 'Pipe joint', 'Spigot & socket / collar joint (2.5 m pipe units assumed)');
+  const enc = rectShape(-encHalf, encHalf, cy - encHalf, cy + encHalf); enc.holes.push(circleHole(cy, ro));
+  extrudeX(fixed, enc, xh, xe - 0.25 - xh, 'mass', 'Pipe encasement',
+    `Mass concrete grade C20 · ${(2*encHalf).toFixed(2)} square · cover D/4 = ${cov.toFixed(2)} (min 0.25) (Section B–B)`);
+  box(fixed, xh, xe, cy - encHalf - 0.1, cy - encHalf, -encHalf - 0.1, encHalf + 0.1, 'blind', 'Blinding concrete', '0.1 m blinding, grade C7');
+  const zt0 = D.hb0 + 1.5*GL;
+  const ew = rectShape(-zt0, zt0, cy - encHalf - 0.25, GL + 0.1); ew.holes.push(circleHole(cy, ro));
+  extrudeX(fixed, ew, xe - 0.25, 0.25, 'mass', 'Outlet end wall', 'Mass concrete C20 · 0.25 thick with 0.25 toe');
+
+  /* transition lining (0.1 m concrete) */
+  {
+    const N = 40, pts = [], idx = [];
+    for(let i=0;i<=N;i++){
+      const x = xe + LT*i/N, t = i/N;
+      const yb = Math.min(S.dBL, (x - xe)/5), hb = D.hb0 + (S.Bw/2 - D.hb0)*t, zt = hb + 1.5*(GL - yb);
+      pts.push(x, GL, -zt,  x, yb, -hb,  x, yb, hb,  x, GL, zt);
+      if(i < N) for(let j=0;j<3;j++){ const a = i*4+j, b = a+4; idx.push(a, b, a+1, a+1, b, b+1); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); g.setIndex(idx); g.computeVertexNormals();
+    addMesh(fixed, g, 'lining', 'Transition lining', `0.1 m concrete lining · bed slope 5:1 · length ${LT.toFixed(1)} m · side slopes 1.5:1`);
+  }
+
+  /* --- operating deck & hand wheel --- */
+  const xg = (gg0 + gg1)/2;
+  box(fixed, xg-0.08, xg+0.08, H, H+0.16, -Wo/2, Wo/2, 'steel', 'Operating beam', 'Steel channel spanning the gate groove');
+  box(fixed, xg-0.15, xg+0.15, H+0.16, H+0.18, -0.15, 0.15, 'iron', 'Base plate', '');
+  const nut = addMesh(fixed, new THREE.CylinderGeometry(0.05, 0.05, 0.1, 24), 'iron', 'Lifting nut housing', ''); nut.position.set(xg, H+0.23, 0);
+  wheelG = new THREE.Group(); wheelG.position.set(xg, H+0.32, 0); fixed.add(wheelG);
+  const R = 0.2 + d*0.05;
+  const rim = addMesh(wheelG, new THREE.TorusGeometry(R, 0.016, 12, 48), 'red', 'Hand wheel', 'Cast iron'); rim.rotation.x = Math.PI/2;
+  addMesh(wheelG, new THREE.CylinderGeometry(0.04, 0.04, 0.06, 20), 'red', 'Hand wheel', 'Cast iron');
+  for(let i=0;i<5;i++){
+    const pv = new THREE.Group(); pv.rotation.y = i/5*Math.PI*2; wheelG.add(pv);
+    const sp = addMesh(pv, new THREE.CylinderGeometry(0.009, 0.012, R-0.03, 8), 'red', 'Hand wheel', 'Cast iron spoke');
+    sp.rotation.z = Math.PI/2; sp.position.x = R/2;
+  }
+
+  /* --- slide gate (moving) --- */
+  movingG = new THREE.Group(); fixed.add(movingG);
+  const gw = Wi + 0.16;
+  box(movingG, xg-0.008, xg+0.008, 0, Lh, -gw/2, gw/2, 'leaf', 'Slide gate leaf',
+    `Skin plate ${gw.toFixed(2)} × ${Lh.toFixed(2)} sliding in 0.1 m gate grooves · covers the Ø${d.toFixed(2)} pipe inlet`);
+  for(let i=0;i<3;i++){
+    const yi = 0.05 + i*(Lh - 0.2)/2;
+    angle(movingG, [xg-0.008, yi, -Wi/2+0.01], [0,0,1], Wi-0.02, [-1,0,0], 0.075, [0,1,0], 0.075, 0.006, 'stiff', 'Gate stiffener', 'L75×75×6');
+  }
+  const stemL = H + 0.62 - Lh;
+  const stem = addMesh(movingG, new THREE.CylinderGeometry(0.02, 0.02, stemL, 16), 'stem', 'Gate stem', `Ø40 rising stem · length ${stemL.toFixed(2)} m`);
+  stem.position.set(xg, Lh + stemL/2, 0);
+  box(movingG, xg-0.04, xg-0.008, Lh-0.12, Lh, -0.05, 0.05, 'stiff', 'Lifting lug', '');
+
+  /* --- stoplogs --- */
+  if(S.stoplogs){
+    const xs = (gs0 + gs1)/2, n = Math.max(1, Math.ceil((S.WL + 0.05)/0.2));
+    for(let i=0;i<n;i++)
+      box(fixed, xs-0.035, xs+0.035, i*0.2+0.003, (i+1)*0.2-0.003, -(Wi/2+0.09), Wi/2+0.09, 'wood', 'Stoplog', `Timber log 0.2 high · ${n} no. stacked in 100×76 groove`);
+  }
+
+  /* --- reinforcement --- */
+  rebarG = new THREE.Group(); rebarG.visible = S.rebar; fixed.add(rebarG);
+  buildRebar(rebarG, top);
+
+  /* --- water --- */
+  const wl = S.WL;
+  waterP = new THREE.Mesh(new THREE.PlaneGeometry(1, 20), waterMat); waterP.rotation.x = -Math.PI/2; waterP.raycast = () => {};
+  const xw1 = 1.5*wl; waterP.scale.x = xw1 + 14; waterP.position.set((xw1 - 14)/2, wl, 0);
+  waterBox = new THREE.Mesh(new THREE.PlaneGeometry(1, Wi - 0.01), waterMat); waterBox.rotation.x = -Math.PI/2; waterBox.raycast = () => {};
+  const xw2 = S.stoplogs ? gs0 : gg0;
+  waterBox.scale.x = Math.max(0.01, xw2 - xw1); waterBox.position.set((xw1 + xw2)/2, wl, 0);
+  waterBox.visible = xw2 > xw1;
+  waterDn = new THREE.Mesh(new THREE.PlaneGeometry(1, 20), waterMat); waterDn.rotation.x = -Math.PI/2; waterDn.raycast = () => {};
+  waterDn.scale.x = D.xEnd - xe; waterDn.position.x = (xe + D.xEnd)/2;
+  fixed.add(waterP, waterBox, waterDn);
+
+  applyEarth(); applyConcrete(); updateMotion(); updateInfo();
+  sun.position.set(D.xe/2 - 12, 22, -14); sun.target.position.set(D.xe/2, 0, 0);
+}
+
+function buildRebar(g, top){
+  const { K, H, Wi, Wo, xh, gg1, cy, ro } = D;
+  const seg = [];
+  const L = (x1,y1,z1,x2,y2,z2) => seg.push(x1,y1,z1,x2,y2,z2);
+  // side walls, both faces, Ø12 @ 200 both directions
+  for(const s of [-1,1]) for(const z of [s*(Wi/2+0.13), s*(Wo/2-0.05)]){
+    for(let x = 0.1; x < gg1 - 0.04; x += 0.2) L(x, -0.15, z, x, top(x) - 0.05, z);
+    for(let y = -0.1; y < H - 0.05; y += 0.2){ const xa = Math.max(0.05, 1.5*(y + 0.05 - 0.2)); if(xa < gg1 - 0.05) L(xa, y, z, gg1 - 0.05, y, z); }
+  }
+  // floor, top & bottom mats
+  for(const y of [-0.05, -0.15]){
+    for(let z = -Wo/2 + 0.05; z <= Wo/2 - 0.05 + 1e-6; z += 0.2) L(0.05, y, z, xh - 0.05, y, z);
+    for(let x = 0.05; x < xh - 0.05; x += (x > K + 1.0 ? 0.1 : 0.2)) L(x, y, -Wo/2 + 0.05, x, y, Wo/2 - 0.05);
+  }
+  // headwall, both faces, skipping the opening
+  const rc = ro + 0.05;
+  for(const x of [gg1 + 0.05, gg1 + 0.15]){
+    for(let z = -Wo/2 + 0.05; z <= Wo/2 - 0.05 + 1e-6; z += 0.2){
+      if(Math.abs(z) < rc){ const dy = Math.sqrt(rc*rc - z*z); L(x, 0.05, z, x, Math.max(0.05, cy - dy), z); L(x, cy + dy, z, x, H - 0.05, z); }
+      else L(x, 0.05, z, x, H - 0.05, z);
+    }
+    for(let y = 0.05; y < H - 0.04; y += 0.2){
+      if(Math.abs(y - cy) < rc){ const dz = Math.sqrt(rc*rc - (y-cy)**2); L(x, y, -Wo/2 + 0.05, x, y, -dz); L(x, y, dz, x, y, Wo/2 - 0.05); }
+      else L(x, y, -Wo/2 + 0.05, x, y, Wo/2 - 0.05);
+    }
+    // trimming bars Ø32 around the opening (octagon)
+    const r8 = (ro + 0.1)/Math.cos(Math.PI/8), edge = 2*(ro + 0.1)*Math.tan(Math.PI/8);
+    for(let k=0;k<8;k++){
+      const a = k*Math.PI/4;
+      const bar = addMesh(g, new THREE.CylinderGeometry(0.016, 0.016, edge*1.5, 8), 'rebar', 'Trimming bars', '4 No. Ø32 both faces around the pipe opening (Section D–D)');
+      bar.position.set(x, cy + (ro+0.1)*Math.sin(a), (ro+0.1)*Math.cos(a));
+      bar.rotation.x = a;
+    }
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  g.add(new THREE.LineSegments(geo, rebarLineMat));
+}
+
+/* ---------------- state updates ---------------- */
+function updateMotion(){
+  const lift = (D.d + 0.1) * S.open/100;
+  movingG.position.y = lift;
+  wheelG.rotation.y = -lift*25;
+  const flow = S.stoplogs ? 0 : S.open/100;
+  const dwl = S.dBL + 0.05 + 0.5*flow*Math.min(1, S.WL/(D.d + 0.2));
+  waterP.visible = waterBox.visible = S.water;
+  if(S.water) waterBox.visible = waterBox.scale.x > 0.02;
+  waterDn.visible = S.water; waterDn.position.y = dwl;
+  document.getElementById('v-open').textContent = `${S.open}% · ${(lift*1000).toFixed(0)} mm`;
+}
+function applyEarth(){
+  root.traverse(o => { if(o.name === 'earth') o.visible = S.earth !== 'none'; });
+  const g = S.earth === 'glass';
+  earthMat.transparent = g; earthMat.opacity = g ? 0.3 : 1; earthMat.depthWrite = !g; earthMat.needsUpdate = true;
+}
+function applyConcrete(){
+  const g = S.concrete === 'glass';
+  root.traverse(o => { if(o.isMesh && o.material.userData && o.material.userData.conc){
+    o.material.transparent = g; o.material.opacity = g ? 0.3 : 1; o.material.depthWrite = !g; o.material.needsUpdate = true; o.castShadow = !g; } });
+}
+function updateInfo(){
+  const d = D, f = (n, k=2) => (+n).toFixed(k);
+  const rows = [
+    ['Pipe diameter D', f(d.d)],
+    ['Encasement (C20), square', `${f(2*d.encHalf)} · cover ${f(d.cov)}`],
+    ['Inlet box clear width D+0.2', f(d.Wi)],
+    ['Inlet box overall width', f(d.Wo)],
+    ['Wall height at gate', f(d.H)],
+    ['B (sloping wing height)', f(d.B)],
+    ['K = 1.5 B', f(d.K)],
+    ['Inlet box length K+1.5+0.2', f(d.K + 1.7)],
+    ['Road width', '5.00'],
+    ['Ramp 7:1 length', f(7*(d.RL - d.GL), 1)],
+    ['Pipe length', f(d.xe - d.gg1, 1)],
+    ['Transition length', f(d.LT, 1)],
+    ['Road level (above P.I.L.)', '+' + f(d.RL)],
+    ['D/S bank top level', '+' + f(d.GL)],
+    ['D/S bed level', '+' + f(S.dBL)],
+    ['Parent canal W.L.', '+' + f(S.WL)],
+  ];
+  document.getElementById('info').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+
+/* ---------------- camera ---------------- */
+function setView(v, instant){
+  const xm = D.xe/2 + 2;
+  const P = {
+    iso:    [[-9, 10, -15], [xm, 0.5, 0]],
+    side:   [[xm, 1.5, -26], [xm, 0.5, 0]],
+    plan:   [[xm, 34, 0.01], [xm, 0, 0]],
+    inlet:  [[-2.6, 3.8 + D.H*0.5, -5.2], [D.K + 0.8, 0.8, 0]],
+    outlet: [[D.xe + 6.5, 3.2, -5.5], [D.xe + 0.5, 0.4, 0]],
+  }[v];
+  const pos = new THREE.Vector3(...P[0]), t = new THREE.Vector3(...P[1]);
+  if(instant){ camera.position.copy(pos); controls.target.copy(t); controls.update(); return; }
+  const p0 = camera.position.clone(), t0 = controls.target.clone(); let k = 0;
+  const step = () => { k = Math.min(1, k + 0.045); const e = 1 - Math.pow(1-k, 3);
+    camera.position.lerpVectors(p0, pos, e); controls.target.lerpVectors(t0, t, e); controls.update();
+    if(k < 1) requestAnimationFrame(step); };
+  step();
+}
+
+/* ---------------- UI ---------------- */
+const fmtM = v => (+v).toFixed(2) + ' m';
+function syncLabels(){
+  document.getElementById('v-D').textContent = (S.D*1000).toFixed(0) + ' mm';
+  document.getElementById('v-fill').textContent = fmtM(S.fill);
+  document.getElementById('v-WL').textContent = '+' + fmtM(S.WL);
+  document.getElementById('v-dBL').textContent = '+' + fmtM(S.dBL);
+  document.getElementById('v-Bw').textContent = fmtM(S.Bw);
+}
+function clampWL(){
+  const d = derive(), el = document.getElementById('WL');
+  el.max = (d.RL - 0.3).toFixed(2);
+  if(S.WL > d.RL - 0.3){ S.WL = +(d.RL - 0.3).toFixed(2); }
+  el.value = S.WL;
+}
+for(const k of ['D','fill','WL','dBL','Bw','open']){
+  const el = document.getElementById(k); el.value = S[k];
+  el.addEventListener('input', () => {
+    S[k] = +el.value;
+    if(k === 'D' || k === 'fill') clampWL();
+    syncLabels();
+    if(k === 'open') updateMotion(); else build();
+  });
+}
+document.querySelectorAll('.seg[data-key]').forEach(seg => seg.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+  seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === btn));
+  S[seg.dataset.key] = btn.dataset.v;
+  if(seg.dataset.key === 'earth') applyEarth(); else applyConcrete();
+})));
+function setSeg(key, v){ document.querySelectorAll(`.seg[data-key=${key}] button`).forEach(b => b.classList.toggle('on', b.dataset.v === v)); S[key] = v; }
+document.getElementById('stoplogs').addEventListener('change', e => { S.stoplogs = e.target.checked; build(); });
+document.getElementById('water').addEventListener('change', e => { S.water = e.target.checked; updateMotion(); });
+document.getElementById('rebar').addEventListener('change', e => {
+  S.rebar = e.target.checked; rebarG.visible = S.rebar;
+  if(S.rebar && S.concrete === 'solid'){ setSeg('concrete', 'glass'); applyConcrete(); }
+  if(S.rebar) setView('inlet');
+});
+const clip = new THREE.Plane(new THREE.Vector3(0,0,1), 0);
+document.getElementById('section').addEventListener('change', e => {
+  S.section = e.target.checked; renderer.clippingPlanes = S.section ? [clip] : [];
+  if(S.section) setView('side');
+});
+document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click', () => setView(b.dataset.cam)));
+let anim = false, dir = 1;
+const playBtn = document.getElementById('play');
+playBtn.addEventListener('click', () => { anim = !anim; playBtn.textContent = anim ? '❚❚ Pause' : '▶ Animate gate'; playBtn.classList.toggle('on', anim); });
+
+/* ---------------- hover ---------------- */
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), tip = document.getElementById('tip');
+let hovered = null;
+renderer.domElement.addEventListener('pointermove', e => {
+  mouse.set(e.clientX/innerWidth*2 - 1, -(e.clientY/innerHeight)*2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(root.children, true).filter(h => h.object.isMesh && h.object.userData.name &&
+    h.object.visible && h.object.parent.visible && (!S.section || h.point.z >= -1e-3));
+  const see = h => (h.object.userData.earth && S.earth !== 'solid') || (h.object.material.userData.conc && S.concrete !== 'solid');
+  const hit = hits.find(h => !see(h)) || hits[0];
+  const obj = hit ? hit.object : null;
+  if(hovered !== obj){
+    if(hovered && hovered.material.emissive && hovered.material !== earthMat) hovered.material.emissive.setHex(0);
+    hovered = obj;
+    if(hovered && hovered.material.emissive && hovered.material !== earthMat) hovered.material.emissive.setHex(0x553300);
+  }
+  if(obj){
+    const [n, s] = obj.userData.earth ? earthLabel(hit.point) : [obj.userData.name, obj.userData.spec];
+    tip.style.display = 'block';
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - 310) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+    tip.innerHTML = `<b>${n}</b>${s ? '<small>' + s + '</small>' : ''}`;
+  } else tip.style.display = 'none';
+});
+renderer.domElement.addEventListener('pointerleave', () => tip.style.display = 'none');
+addEventListener('resize', () => { camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+/* ---------------- go ---------------- */
+clampWL(); syncLabels(); build(); setView('iso', true);
+renderer.setAnimationLoop(() => {
+  if(anim){
+    S.open += dir*0.5;
+    if(S.open >= 100){ S.open = 100; dir = -1; } if(S.open <= 0){ S.open = 0; dir = 1; }
+    document.getElementById('open').value = S.open; updateMotion();
+  }
+  controls.update(); renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

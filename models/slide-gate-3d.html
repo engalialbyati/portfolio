@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Typical Slide Gate 3D</title>
+<style>
+  :root{--bg1:#dfe6ec;--bg2:#b9c4ce;--panel:rgba(18,24,32,.88);--ink:#e8edf2;--mute:#9aa8b6;--acc:#f0a830;--line:rgba(255,255,255,.12)}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(#e9eef2,#b7c2cc)}
+  #app{position:fixed;inset:0}
+  #panel{position:fixed;top:12px;left:12px;width:300px;max-height:calc(100% - 24px);overflow:auto;background:var(--panel);color:var(--ink);border-radius:12px;padding:14px 14px 10px;backdrop-filter:blur(6px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  #panel h1{font-size:16px;margin:0 0 2px;letter-spacing:.3px}
+  .sub{color:var(--mute);font-size:11.5px;margin-bottom:10px}
+  .grp{border-top:1px solid var(--line);padding:9px 0 6px}
+  .grp>.t{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--mute);margin-bottom:6px}
+  .row{display:grid;grid-template-columns:1fr 58px;align-items:center;gap:6px;margin:5px 0}
+  .row label{grid-column:1/3;display:flex;justify-content:space-between}
+  .row label b{color:var(--acc);font-weight:600}
+  input[type=range]{grid-column:1/3;width:100%;accent-color:var(--acc)}
+  .seg{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
+  .seg button{flex:1;background:#2a3440;color:var(--ink);border:1px solid #3a4655;border-radius:6px;padding:5px 6px;cursor:pointer;font-size:12px}
+  .seg button.on{background:var(--acc);color:#1b1b1b;border-color:var(--acc);font-weight:600}
+  .chk{display:flex;align-items:center;gap:7px;margin:5px 0;cursor:pointer}
+  .chk input{accent-color:var(--acc)}
+  table{width:100%;border-collapse:collapse;font-size:11.8px}
+  td{padding:2.5px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+  td:last-child{text-align:right;color:#fff;font-variant-numeric:tabular-nums}
+  td:first-child{color:var(--mute)}
+  #tip{position:fixed;pointer-events:none;background:rgba(18,24,32,.92);color:#fff;padding:6px 9px;border-radius:7px;font-size:12px;display:none;max-width:280px;border-left:3px solid var(--acc)}
+  #tip small{display:block;color:#b9c6d3}
+  #hint{position:fixed;right:12px;bottom:10px;color:#2c3a47;font-size:11.5px;background:rgba(255,255,255,.6);padding:5px 9px;border-radius:6px}
+  #toggle{display:none;position:fixed;top:12px;left:12px;z-index:3;background:var(--panel);color:#fff;border:0;border-radius:8px;padding:8px 12px}
+  @media (max-width:640px){#panel{width:calc(100% - 24px);max-height:55%;top:auto;bottom:12px}#hint{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="panel">
+  <h1>Typical Slide Gate</h1>
+  <div class="sub">For openings 70–150 cm · rectangular a×b or round Ø C<br>After Al-Furat Center drawing 7/269 (1998)</div>
+
+  <div class="grp">
+    <div class="t">Opening</div>
+    <div class="seg" data-key="shape">
+      <button data-v="rect" class="on">Rect a × b</button>
+      <button data-v="round">Round Ø C</button>
+    </div>
+    <div class="row" id="row-a"><label>Clear width a <b id="v-a"></b></label><input type="range" id="a" min="600" max="1600" step="50"></div>
+    <div class="row"><label><span id="lbl-b">Clear height b</span> <b id="v-b"></b></label><input type="range" id="b" min="600" max="1600" step="50"></div>
+    <div class="row"><label>Platform height P <b id="v-P"></b></label><input type="range" id="P" min="1500" max="4500" step="100"></div>
+    <div class="row"><label>Upstream water depth <b id="v-h"></b></label><input type="range" id="h" min="500" max="4500" step="100"></div>
+  </div>
+
+  <div class="grp">
+    <div class="t">Operation</div>
+    <div class="row"><label>Gate opening <b id="v-open"></b></label><input type="range" id="open" min="0" max="100" step="1"></div>
+    <div class="seg"><button id="play">▶ Animate</button></div>
+    <div class="t" style="margin-top:6px">Lifting device</div>
+    <div class="seg" data-key="device">
+      <button data-v="auto" class="on">Auto</button>
+      <button data-v="wheel">Hand wheel</button>
+      <button data-v="hoist">5-t hoist</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="t">View</div>
+    <div class="seg" data-key="concrete">
+      <button data-v="solid">Concrete solid</button>
+      <button data-v="glass" class="on">See-through</button>
+      <button data-v="none">Hide</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="water" checked> Show water</label>
+    <label class="chk"><input type="checkbox" id="section"> Section Y–Y (cut at centreline)</label>
+    <div class="seg" id="views">
+      <button data-cam="iso">3D</button>
+      <button data-cam="up">Upstream elev.</button>
+      <button data-cam="side">Side</button>
+      <button data-cam="plan">Plan</button>
+    </div>
+  </div>
+
+  <div class="grp">
+    <div class="t">Derived dimensions (mm)</div>
+    <table id="info"></table>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="hint">Drag to orbit · right-drag to pan · scroll to zoom · hover a part for its spec</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ---------------- state ---------------- */
+const S = { shape:'rect', a:1000, b:1200, P:2500, h:3000, open:0, device:'auto', concrete:'glass', water:true, section:false };
+
+/* ---------------- renderer / scene ---------------- */
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.02, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.55));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(-4, 7, -5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left:-5, right:5, top:6, bottom:-3, near:0.5, far:25 });
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color:0x9aa48f, roughness:1 }));
+ground.rotation.x = -Math.PI/2; ground.position.y = -0.401; ground.receiveShadow = true;
+ground.raycast = () => {};
+scene.add(ground);
+
+const root = new THREE.Group(); root.scale.setScalar(0.001); scene.add(root); // model in mm
+
+/* ---------------- materials ---------------- */
+const M = {
+  frame:   { color:0x56687a, metalness:.55, roughness:.45 },
+  leaf:    { color:0x2f6fa8, metalness:.45, roughness:.5 },
+  stiff:   { color:0x4a8fd0, metalness:.45, roughness:.5 },
+  guide:   { color:0xb07b3c, metalness:.5,  roughness:.45 },
+  filler:  { color:0x8a6a3e, metalness:.5,  roughness:.5 },
+  stem:    { color:0xd5dade, metalness:.95, roughness:.22 },
+  thread:  { color:0x8f979f, metalness:.9,  roughness:.35 },
+  iron:    { color:0x2c2f33, metalness:.6,  roughness:.55 },
+  red:     { color:0xa83a2a, metalness:.4,  roughness:.5 },
+  bolt:    { color:0xc8a84a, metalness:.9,  roughness:.3 },
+  anchor:  { color:0x9c5a32, metalness:.5,  roughness:.7 },
+  bracket: { color:0x6b7d8f, metalness:.55, roughness:.45 },
+};
+const concreteMat = new THREE.MeshStandardMaterial({ color:0xbdb8ad, roughness:.95, metalness:0, transparent:true, opacity:.28, depthWrite:false, side:THREE.DoubleSide });
+const waterMat = new THREE.MeshStandardMaterial({ color:0x3b8fd8, roughness:.15, metalness:.1, transparent:true, opacity:.32, depthWrite:false });
+
+function mesh(geo, key, name, spec){
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(M[key]));
+  m.castShadow = m.receiveShadow = true;
+  m.userData = { name, spec };
+  return m;
+}
+function box(parent, x0,x1,y0,y1,z0,z1, key, name, spec){
+  const m = mesh(new THREE.BoxGeometry(Math.abs(x1-x0), Math.abs(y1-y0), Math.abs(z1-z0)), key, name, spec);
+  m.position.set((x0+x1)/2, (y0+y1)/2, (z0+z1)/2);
+  parent.add(m); return m;
+}
+/* Rolled angle: corner point, axis direction & length, leg A along dA, leg B along dB, thickness t */
+function angle(parent, c, axis, len, dA, legA, dB, legB, t, key, name, spec){
+  const add = (ea, eb) => {
+    const p1 = c.map((v,i) => v + axis[i]*len + dA[i]*ea + dB[i]*eb);
+    box(parent, c[0],p1[0], c[1],p1[1], c[2],p1[2], key, name, spec);
+  };
+  add(legA, t); add(t, legB);
+}
+function cyl(parent, r, len, key, name, spec, seg=24){
+  const m = mesh(new THREE.CylinderGeometry(r, r, len, seg), key, name, spec);
+  parent.add(m); return m;
+}
+
+/* ---------------- model ---------------- */
+let fixedG, movingG, wheelG, crankG, waterUp, waterDn, D = {};
+
+function disposeGroup(g){
+  if(!g) return;
+  g.traverse(o => { if(o.isMesh){ o.geometry.dispose(); if(o.material!==concreteMat && o.material!==waterMat) o.material.dispose(); } });
+  root.remove(g);
+}
+
+function derive(){
+  const b = S.b, a = S.shape==='round' ? S.b : S.a, P = S.P, h = S.h;
+  const st = h <= 1000 ? 6 : h <= 2000 ? 8 : 10;
+  const L = b + 70;
+  const device = S.device==='auto' ? (h <= 1500 ? 'wheel' : 'hoist') : S.device;
+  return {
+    a, b, P, h, st, device,
+    LF: Math.max(2*b + 950, P + 900),
+    BF: a + 200,
+    LW: a + 90, LH: b + 50,
+    LS: a + 70,
+    LG: 1.5*b + 90,
+    stemL: Math.max(2*b + 950, P + 900) + 300 - b,
+    thread: b + 150,
+    stemD: L >= 1700 ? 50 : 40,
+    yc: 2*b + 70,
+    nSt: b > 1100 ? 5 : 4,
+    filler: st===6 ? '40×8' : st===8 ? '40×10' : '40×12',
+  };
+}
+
+function build(){
+  disposeGroup(fixedG); disposeGroup(movingG);
+  D = derive();
+  const { a, b, P, h, st, LF, LW, LH, LS, LG, stemL, thread, stemD, yc, nSt } = D;
+  const sR = stemD/2;
+  const zf = -1;            // frame face plane (flush with concrete face z=0)
+  const zs0 = zf - 2;       // downstream face of skin plate (2 mm gap)
+  const zs = zs0 - st;      // upstream face of skin plate
+  const zc = zs - 40;       // stem axis
+  D.zc = zc;
+
+  fixedG = new THREE.Group(); movingG = new THREE.Group();
+  root.add(fixedG, movingG);
+
+  /* --- concrete headwall with opening --- */
+  const W = a + 1600, yb = -400, T = 400;
+  const shp = new THREE.Shape();
+  shp.moveTo(-W/2, yb); shp.lineTo(W/2, yb); shp.lineTo(W/2, P); shp.lineTo(-W/2, P); shp.closePath();
+  const hole = new THREE.Path();
+  if(S.shape==='round'){ hole.absarc(0, b/2, b/2, 0, Math.PI*2, true); }
+  else { hole.moveTo(-a/2,0); hole.lineTo(-a/2,b); hole.lineTo(a/2,b); hole.lineTo(a/2,0); hole.closePath(); }
+  shp.holes.push(hole);
+  const wall = new THREE.Mesh(new THREE.ExtrudeGeometry(shp, { depth:T, bevelEnabled:false, curveSegments:64 }), concreteMat);
+  wall.userData = { name:'Concrete head wall', spec:`Opening ${S.shape==='round' ? 'Ø'+b : a+' × '+b} · platform at P = ${P}` };
+  wall.receiveShadow = true; wall.castShadow = true; wall.name = 'concrete';
+  fixedG.add(wall);
+  const conc = (x0,x1,y0,y1,z0,z1,name) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(x1-x0, y1-y0, z1-z0), concreteMat);
+    m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2); m.receiveShadow = true; m.name='concrete';
+    m.userData = { name, spec:'Reinforced concrete' }; fixedG.add(m);
+  };
+  conc(-W/2, W/2, yb, 0, -2600, 0, 'Upstream channel floor');
+  conc(-W/2, W/2, yb, 0, T, 2400, 'Downstream floor');
+  conc(-W/2, W/2, P-150, P, T, T+900, 'Operating platform');
+
+  /* --- embedded frame: angles 100×100×8 --- */
+  const FR = 'Frame angle';
+  for(const s of [-1, 1]){
+    angle(fixedG, [s*a/2, -100, zf], [0,1,0], LF+100, [s,0,0], 100, [0,0,1], 100, 8, 'frame', FR,
+      `L100×100×8 frame side · length LF = ${LF}`);
+  }
+  angle(fixedG, [-(a/2+100), 0, zf], [1,0,0], a+200, [0,-1,0], 100, [0,0,1], 100, 8, 'frame', FR, `L100×100×8 sill angle · BF = ${a+200}`);
+  angle(fixedG, [-(a/2+100), b, zf], [1,0,0], a+200, [0,1,0], 100, [0,0,1], 100, 8, 'frame', FR, 'L100×100×8 top of opening + top seal plate 100×8');
+
+  /* guide plates 50×6 and filler bars */
+  for(const s of [-1, 1]){
+    const x = v => s*v;
+    box(fixedG, x(a/2+50), x(a/2+90), 0, LG, zf-(st+2), zf, 'filler', 'Filler bar', `${D.filler} · length LG = ${Math.round(LG)}`);
+    box(fixedG, x(a/2+40), x(a/2+90), 0, LG, zf-(st+2)-6, zf-(st+2), 'guide', 'Guide plate', `50×6 · length LG = 1.5b + 90 = ${Math.round(LG)}`);
+    /* bottom stoppers L60×60×6 – 100 long */
+    angle(fixedG, [x(a/2-100), 0, zf], [s,0,0], 100, [0,0,-1], 60, [0,-1,0], 60, 6, 'red', 'Bottom stopper', 'L60×60×6 – 100 long');
+  }
+
+  /* anchors Ø16 – 250 long @ 250 c/c */
+  const anchorGeo = new THREE.CylinderGeometry(8, 8, 250, 10).translate(0, 125, 0);
+  const hookGeo = new THREE.TorusGeometry(24, 8, 8, 14, Math.PI).translate(-24, 250, 0);
+  let nA = 0;
+  const addAnchor = (p, dir) => {
+    const g = new THREE.Group();
+    const spec = 'Ø16 – 250 long, hooked, spaced 250 c/c';
+    g.add(mesh(anchorGeo, 'anchor', 'Anchor bar', spec), mesh(hookGeo, 'anchor', 'Anchor bar', spec));
+    g.position.set(...p);
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), new THREE.Vector3(...dir).normalize());
+    fixedG.add(g); nA++;
+  };
+  const yTop = Math.min(P, LF) - 120;
+  for(const s of [-1,1]) for(let y = 125; y < yTop; y += 250) addAnchor([s*(a/2+60), y, 7], [s, 0, 1]);
+  for(let x = -a/2 + 125; x < a/2; x += 250){ addAnchor([x, -60, 7], [0,-1,1]); if(b+60 < P-100) addAnchor([x, b+60, 7], [0,1,1]); }
+  D.nA = nA;
+
+  /* collar guide at 2b+70 above sill (Detail E) */
+  angle(fixedG, [-(a/2+100), yc, zf], [1,0,0], a+200, [0,0,-1], 100, [0,-1,0], 100, 8, 'bracket', 'Collar guide support', 'L100×100×8 welded to frame sides');
+  box(fixedG, -90, 90, yc, yc+6, zf-100, zf, 'bracket', 'Collar plate', '6 mm plate, 180 long');
+  const collarGeo = new THREE.LatheGeometry([new THREE.Vector2(sR+2,0), new THREE.Vector2(30,0), new THREE.Vector2(30,50), new THREE.Vector2(sR+2,50), new THREE.Vector2(sR+2,0)], 32);
+  const collar = mesh(collarGeo, 'iron', 'Collar guide', `ID ${stemD+2} / OD 60 / 50 high · at 2b+70 = ${yc} above sill`);
+  collar.position.set(0, yc+6, zc); fixedG.add(collar);
+
+  /* top bracketry: cross beam, diagonal stays, brackets 400×160×6, base plate 400×250×16 */
+  const yCB = LF - 160;
+  angle(fixedG, [-(a/2+100), yCB, zf], [1,0,0], a+200, [0,0,-1], 100, [0,-1,0], 100, 8, 'bracket', 'Top cross angle', 'L100×100×8');
+  for(const s of [-1,1]){
+    const A = new THREE.Vector3(s*(a/2+50), LF-800, zf-50), B = new THREE.Vector3(s*200, yCB-100, zf-50);
+    const len = A.distanceTo(B);
+    const g = new THREE.Group();
+    angle(g, [0,0,-50], [0,1,0], len, [1,0,0], 100, [0,0,1], 100, 8, 'bracket', 'Stay (diagonal)', 'L100×100×8');
+    g.children.forEach(m => m.position.x -= 50);
+    g.position.copy(A);
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), B.clone().sub(A).normalize());
+    fixedG.add(g);
+    box(fixedG, s*150-3, s*150+3, yCB, LF, zc-125, zc+125, 'bracket', 'Bracket', '400×160×6 plate');
+  }
+  box(fixedG, -200, 200, LF, LF+16, zc-125, zc+125, 'iron', 'Base plate', '400×250×16');
+
+  /* --- lifting device --- */
+  wheelG = null; crankG = null;
+  const hub = new THREE.Group(); hub.position.set(0, 0, zc); fixedG.add(hub);
+  if(D.device === 'wheel'){
+    const nut = cyl(hub, 55, 64, 'iron', 'Lifting nut housing', 'Bronze nut in cast-iron housing'); nut.position.y = LF+16+32;
+    wheelG = new THREE.Group(); wheelG.position.y = LF+110; hub.add(wheelG);
+    const R = Math.min(320, 180 + a*0.08);
+    const rim = mesh(new THREE.TorusGeometry(R, 18, 14, 64), 'red', 'Hand wheel', 'Circular cast-iron hand wheel · for water depth ≤ 1.50 m');
+    rim.rotation.x = Math.PI/2; wheelG.add(rim);
+    const hb = cyl(wheelG, 48, 70, 'red', 'Hand wheel hub', 'Cast iron'); hb.position.y = 0;
+    for(let i=0;i<5;i++){
+      const sp = mesh(new THREE.CylinderGeometry(10, 13, R-40, 10), 'red', 'Hand wheel', 'Cast iron spoke');
+      const ang = i/5*Math.PI*2;
+      sp.rotation.z = Math.PI/2; sp.position.set((R/2+20), 0, 0);
+      const pv = new THREE.Group(); pv.rotation.y = ang; pv.add(sp); wheelG.add(pv);
+    }
+    const knob = cyl(wheelG, 14, 120, 'iron', 'Spinner handle', ''); knob.position.set(R, 60, 0);
+  } else {
+    const spec = '5-ton capacity lifting device · gate 1000×1200, head 3.0 m';
+    const fl = cyl(hub, 175, 20, 'iron', 'Gear box flange', spec, 40); fl.position.y = LF+26;
+    const hs = cyl(hub, 135, 240, 'frame', 'Gear box', spec, 40); hs.position.y = LF+36+120;
+    const cap = cyl(hub, 70, 40, 'iron', 'Bearing cap', 'Hoist with ball bearing'); cap.position.y = LF+296;
+    const gp = mesh(new THREE.SphereGeometry(16, 12, 8), 'bolt', 'Grease plug', ''); gp.position.set(90, LF+282, 0); hub.add(gp);
+    const sh = cyl(hub, 18, 560, 'stem', 'Input shaft', spec); sh.rotation.z = Math.PI/2; sh.position.set(130+280, LF+150, 0);
+    crankG = new THREE.Group(); crankG.position.set(690, LF+150, 0); hub.add(crankG);
+    box(crankG, 0, 30, -400, 20, -15, 15, 'red', 'Crank', 'Crank arm');
+    const hd = cyl(crankG, 16, 150, 'iron', 'Crank handle', ''); hd.rotation.z = Math.PI/2; hd.position.set(105, -385, 0);
+  }
+
+  /* --- moving part: gate leaf + stem --- */
+  box(movingG, -LW/2, LW/2, 0, LH, zs, zs0, 'leaf', 'Skin plate', `(a+90)×(b+50) = ${LW}×${LH} · thickness ${st} mm`);
+  for(let i=0;i<nSt;i++){
+    const yi = 50 + i*(LH - 275 - 50)/(nSt-1);
+    angle(movingG, [-LS/2, yi, zs], [1,0,0], LS, [0,0,-1], 75, [0,1,0], 75, 6, 'stiff', 'Stiffener angle', `L75×75×6 · length LS = a+70 = ${LS} · ${nSt} no.`);
+  }
+  for(const s of [-1,1]){
+    angle(movingG, [s*(sR+4), LH-190, zs], [0,1,0], 190, [s,0,0], 75, [0,0,-1], 75, 6, 'stiff', 'Lifting lug', '2 angles L75×75×6 – 190 long (Detail G2)');
+  }
+  const bolt = cyl(movingG, 8, 2*(sR+4)+40, 'bolt', 'Stem bolt', 'M16 – 70 hex bolt with nut and washer', 12);
+  bolt.rotation.z = Math.PI/2; bolt.position.set(0, LH-100, zc);
+  for(const s of [-1,1]){ const n = cyl(movingG, 14, 12, 'bolt', 'Nut', 'M16 hex nut', 6); n.rotation.z = Math.PI/2; n.position.set(s*(sR+4+20), LH-100, zc); }
+
+  const yB = LH - 160, yT = yB + stemL;
+  const plain = cyl(movingG, sR, stemL - thread, 'stem', 'Stem', `Ø${stemD} · length LF+300−b = ${stemL}`);
+  plain.position.set(0, yB + (stemL-thread)/2, zc);
+  const thr = cyl(movingG, sR-1.5, thread, 'thread', 'Threaded stem', `Power screw · thread length b+150 = ${thread}`);
+  thr.position.set(0, yT - thread/2, zc);
+  const ringGeo = new THREE.TorusGeometry(sR-1, 2.6, 6, 22);
+  for(let y = yT - thread + 12; y < yT - 6; y += 24){
+    const r = mesh(ringGeo, 'thread', 'Threaded stem', `Power screw · thread length b+150 = ${thread}`);
+    r.rotation.x = Math.PI/2; r.position.set(0, y, zc); r.castShadow = false; movingG.add(r);
+  }
+
+  /* --- water --- */
+  waterUp = new THREE.Mesh(new THREE.BoxGeometry(W-4, 1, 2600-10), waterMat);
+  waterUp.raycast = () => {}; fixedG.add(waterUp);
+  waterDn = new THREE.Mesh(new THREE.BoxGeometry((S.shape==='round'? b*0.7 : a)-4, 1, 2400), waterMat);
+  waterDn.raycast = () => {}; fixedG.add(waterDn);
+
+  applyConcrete(); updateMotion(); updateInfo();
+}
+
+/* ---------------- motion / view state ---------------- */
+function updateMotion(){
+  const lift = D.b * S.open/100;
+  movingG.position.y = lift;
+  if(wheelG) wheelG.rotation.y = -lift/25;
+  if(crankG) crankG.rotation.x = lift/12;
+  const wl = Math.min(S.h, S.P - 160);
+  waterUp.visible = S.water; waterUp.scale.y = wl; waterUp.position.set(0, wl/2, -1305);
+  const dl = Math.min(lift, D.b, wl) * 0.65;
+  waterDn.visible = S.water && dl > 5;
+  waterDn.scale.y = Math.max(dl, 1); waterDn.position.set(0, dl/2, 1200);
+  document.getElementById('v-open').textContent = `${S.open}% · ${Math.round(lift)} mm`;
+}
+function applyConcrete(){
+  fixedG.children.forEach(o => { if(o.name==='concrete') o.visible = S.concrete !== 'none'; });
+  const solid = S.concrete === 'solid';
+  concreteMat.transparent = !solid; concreteMat.opacity = solid ? 1 : .28; concreteMat.depthWrite = solid;
+  concreteMat.needsUpdate = true;
+}
+function updateInfo(){
+  const d = D, f = n => Math.round(n).toLocaleString('en-US');
+  const rows = [
+    ['Clear opening', S.shape==='round' ? `Ø C = ${f(d.b)}` : `${f(d.a)} × ${f(d.b)}`],
+    ['Frame length LF', f(d.LF)],
+    ['Frame width BF = a+200', f(d.BF)],
+    ['Gate leaf (a+90)×(b+50)', `${f(d.LW)} × ${f(d.LH)}`],
+    ['Skin plate thickness', `${d.st} mm`],
+    ['Stiffeners L75×75×6', `${d.nSt} × ${f(d.LS)}`],
+    ['Guide plates 50×6', `2 × ${f(d.LG)}`],
+    ['Filler bars', `2 × ${d.filler} × ${f(d.LG)}`],
+    ['Stem', `Ø${d.stemD} × ${f(d.stemL)}`],
+    ['Threaded length b+150', f(d.thread)],
+    ['Collar guide above sill', f(d.yc)],
+    ['Platform above sill P', f(d.P)],
+    ['Anchors Ø16 – 250', `${d.nA} no.`],
+    ['Lifting device', d.device==='wheel' ? 'Cast-iron hand wheel' : '5-t gear hoist + crank'],
+  ];
+  document.getElementById('info').innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+}
+
+/* ---------------- camera presets ---------------- */
+function setView(v, instant){
+  const H = D.LF/1000, t = new THREE.Vector3(0, H*0.45, 0), dist = Math.max(4.2, H*1.9);
+  const pos = {
+    iso:  new THREE.Vector3(-dist*0.62, H*0.75, -dist*0.78),
+    up:   new THREE.Vector3(0, H*0.45, -dist),
+    side: new THREE.Vector3(-dist, H*0.45, -0.05),
+    plan: new THREE.Vector3(0.001, dist*1.1, -0.2),
+  }[v];
+  if(v==='plan') t.set(0, 0, -0.1);
+  if(instant){ camera.position.copy(pos); controls.target.copy(t); controls.update(); return; }
+  const p0 = camera.position.clone(), t0 = controls.target.clone(); let k = 0;
+  const step = () => { k = Math.min(1, k + 0.05); const e = 1 - Math.pow(1-k, 3);
+    camera.position.lerpVectors(p0, pos, e); controls.target.lerpVectors(t0, t, e); controls.update();
+    if(k < 1) requestAnimationFrame(step); };
+  step();
+}
+
+/* ---------------- UI wiring ---------------- */
+const sliders = ['a','b','P','h','open'];
+const units = { a:' mm', b:' mm', P:' mm', h:' m' };
+function syncLabels(){
+  for(const k of ['a','b','P','h']){
+    const el = document.getElementById('v-'+k);
+    el.textContent = k==='h' ? (S.h/1000).toFixed(2)+' m' : S[k]+' mm';
+  }
+  document.getElementById('row-a').style.display = S.shape==='round' ? 'none' : '';
+  document.getElementById('lbl-b').textContent = S.shape==='round' ? 'Diameter C' : 'Clear height b';
+}
+sliders.forEach(k => {
+  const el = document.getElementById(k); el.value = S[k];
+  el.addEventListener('input', () => {
+    S[k] = +el.value; syncLabels();
+    if(k==='open') updateMotion(); else build();
+  });
+});
+document.querySelectorAll('.seg[data-key]').forEach(seg => {
+  seg.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x===btn));
+    S[seg.dataset.key] = btn.dataset.v; syncLabels();
+    if(seg.dataset.key==='concrete') applyConcrete(); else build();
+  }));
+});
+document.getElementById('water').addEventListener('change', e => { S.water = e.target.checked; updateMotion(); });
+const clipPlane = new THREE.Plane(new THREE.Vector3(-1,0,0), 0);
+document.getElementById('section').addEventListener('change', e => {
+  S.section = e.target.checked; renderer.clippingPlanes = S.section ? [clipPlane] : [];
+  if(S.section) setView('side');
+});
+document.querySelectorAll('#views button').forEach(b => b.addEventListener('click', () => setView(b.dataset.cam)));
+
+let anim = false, dir = 1;
+const playBtn = document.getElementById('play');
+playBtn.addEventListener('click', () => { anim = !anim; playBtn.textContent = anim ? '❚❚ Pause' : '▶ Animate'; playBtn.classList.toggle('on', anim); });
+
+/* ---------------- hover tooltip ---------------- */
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), tip = document.getElementById('tip');
+let hovered = null;
+renderer.domElement.addEventListener('pointermove', e => {
+  mouse.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(root.children, true).filter(h => h.object.visible && h.object.userData.name &&
+    (!S.section || h.point.x <= 0.0005) && (h.object.material !== concreteMat || S.concrete==='solid'));
+  const obj = hits.length ? hits[0].object : null;
+  if(hovered !== obj){
+    if(hovered && hovered.material.emissive) hovered.material.emissive.setHex(0);
+    hovered = obj;
+    if(hovered && hovered.material.emissive && hovered.material !== concreteMat) hovered.material.emissive.setHex(0x553300);
+  }
+  if(obj){
+    tip.style.display = 'block';
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - 290) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+    tip.innerHTML = `<b>${obj.userData.name}</b>${obj.userData.spec ? '<small>'+obj.userData.spec+'</small>' : ''}`;
+  } else tip.style.display = 'none';
+});
+renderer.domElement.addEventListener('pointerleave', () => tip.style.display = 'none');
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ---------------- go ---------------- */
+syncLabels();
+build();
+setView('iso', true);
+
+renderer.setAnimationLoop(() => {
+  if(anim){
+    S.open += dir * 0.4;
+    if(S.open >= 100){ S.open = 100; dir = -1; } if(S.open <= 0){ S.open = 0; dir = 1; }
+    S.open = Math.round(S.open*10)/10;
+    document.getElementById('open').value = S.open;
+    updateMotion();
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
