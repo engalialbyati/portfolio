@@ -13,7 +13,7 @@ Static website, no build step. Serve the contents of this repository's root as `
 2. Clone or update the repo into a directory outside the web root:
    ```bash
    sudo mkdir -p /var/www/cv.liquid1611.com
-   git clone <REPO_URL> /opt/cv-portfolio   # first time
+   git clone https://github.com/engalialbyati/portfolio.git /opt/cv-portfolio   # first time
    git -C /opt/cv-portfolio pull --ff-only   # later updates
    ```
 3. Publish the files (everything except `.git` and this file):
